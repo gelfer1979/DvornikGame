@@ -1,0 +1,139 @@
+Of course! Using Visual Studio Code to build an APK for your game is a great choice, especially if you prefer a lightweight editor and are comfortable working with the command line.
+
+The underlying process is the same as with Android Studio—it uses Gradle, the Android SDK, and the NDK to compile your C++ code and package everything. The main difference is that you'll be running the build commands yourself from VS Code's integrated terminal instead of clicking buttons in an IDE.
+
+Here’s how you can set it up.
+
+Prerequisites
+Visual Studio Code: Make sure you have the C/C++ extension from Microsoft installed.
+Java Development Kit (JDK): Gradle, the build system used by Android, requires a JDK. Version 11 or newer is recommended. You can get it from OpenJDK.
+After installing, you must set the JAVA_HOME environment variable to point to your JDK installation directory.
+Android SDK Command-Line Tools: Instead of installing the full Android Studio, you can download just the command-line tools.
+Go to the Android Studio download page and scroll down to the "Command line tools only" section.
+SDL2 and SDL2_mixer Source Code: You'll need the full source code for these libraries, which you already have.
+Step 1: Install and Configure the Tools
+Install the JDK: Install the JDK and set the JAVA_HOME environment variable on your system.
+
+Install Android SDK Command-Line Tools:
+
+Download the tools and unzip them to a permanent location, for example: C:\Android\sdk.
+Set the ANDROID_HOME (or ANDROID_SDK_ROOT) environment variable to this path (C:\Android\sdk).
+Add the following directories to your system's PATH environment variable so you can run the tools from anywhere:
+C:\Android\sdk\cmdline-tools\latest\bin
+C:\Android\sdk\platform-tools
+Install SDK Packages: Open a new terminal (or Command Prompt) and use the sdkmanager tool you just added to your path to download the necessary platform components. Run the following commands:
+
+bash
+ Show full code block 
+# Installs platform-tools, which includes the Android Debug Bridge (adb)
+sdkmanager --install "platform-tools"
+
+# Installs the Android 13 (API 33) platform. You can choose another recent version.
+sdkmanager --install "platforms;android-33"
+
+# Installs the build tools. Match the version with what's common or recent.
+sdkmanager --install "build-tools;33.0.1"
+
+# Installs a recent version of the NDK (Native Development Kit)
+sdkmanager --install "ndk;25.1.8937393"
+Step 2: Set Up Your Project
+This is the same structure from the previous guide.
+
+Create a main project folder (e.g., DvornikGameAndroid).
+Find the android-project directory inside your SDL2 source folder and copy it into your DvornikGameAndroid folder. Rename it to app.
+Unzip the full SDL2 and SDL2_mixer source code into your DvornikGameAndroid folder.
+Your final project structure should look like this:
+
+plaintext
+DvornikGameAndroid/
+├── app/          (The Android project template)
+├── SDL/          (The full SDL2 source code)
+└── SDL_mixer/    (The full SDL2_mixer source code)
+Step 3: Add Your Code and Assets
+This step is also identical.
+
+C++ Code: Place your main.cpp file inside the app/src/main/jni/src/ directory.
+Assets: Place all your game assets (sprites.bmp, ground.bmp, POO.WAV, etc.) into the app/src/main/assets/ directory.
+Step 4: Configure the Build
+Edit app/src/main/jni/Android.mk: Open this file in VS Code and modify it to include your main.cpp file and link the necessary libraries.
+
+makefile
+ Show full code block 
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := main
+
+# Adjust these paths if your SDL folders are located elsewhere
+SDL_PATH := ../../../../../SDL
+SDL_MIXER_PATH := ../../../../../SDL_mixer
+
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/$(SDL_PATH)/include \
+                    $(LOCAL_PATH)/$(SDL_MIXER_PATH)
+
+# Add your C++ source files here
+LOCAL_SRC_FILES := src/main.cpp
+
+# Link against the SDL libraries
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_mixer
+
+# Standard Android libraries
+LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid
+
+include $(BUILD_SHARED_LIBRARY)
+Edit app/build.gradle: Open this file and set minSdkVersion to 19 to target Android 4.4.
+
+groovy
+ Show full code block 
+// Inside app/build.gradle
+android {
+    // ... other settings
+    defaultConfig {
+        applicationId "org.libsdl.app"
+        minSdkVersion 19  // <--- This is for Android 4.4 (KitKat)
+        targetSdkVersion 33 // It's good practice to target a recent SDK
+        versionCode 1
+        versionName "1.0"
+        // ...
+    }
+    // ...
+}
+Create local.properties: In the root of your DvornikGameAndroid folder, create a new file named local.properties. This file tells Gradle where to find your Android SDK. Add the following line, adjusting the path if you installed the SDK elsewhere.
+
+On Windows:
+
+properties
+sdk.dir=C\:\\Android\\sdk
+On macOS/Linux:
+
+properties
+sdk.dir=/path/to/your/android/sdk
+Step 5: Build the APK in VS Code
+Open your main project folder (DvornikGameAndroid) in Visual Studio Code.
+
+Open the integrated terminal (you can use the shortcut Ctrl+ ` ``).
+
+The SDL project template includes a "Gradle Wrapper" (gradlew.bat or gradlew), which automatically downloads and uses the correct version of Gradle. Run the build command from the root of your project:
+
+On Windows:
+
+cmd
+.\gradlew.bat assembleDebug
+On macOS/Linux:
+
+bash
+./gradlew assembleDebug
+Gradle will now compile your C++ code with the NDK, compile the Android app code, and package everything into an APK.
+
+Step 6: Install and Run
+After the build finishes successfully, you will find your APK at: app/build/outputs/apk/debug/app-debug.apk.
+
+Connect an Android device with "USB Debugging" enabled, or start an Android emulator.
+
+From the terminal in VS Code, use the Android Debug Bridge (adb) to install the APK:
+
+bash
+adb install app/build/outputs/apk/debug/app-debug.apk
+Your game should now be installed on the device and ready to run! This command-line workflow is very powerful and gives you a lot of control, with VS Code serving as an excellent editor and terminal host.
+
