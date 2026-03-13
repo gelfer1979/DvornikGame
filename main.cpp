@@ -526,11 +526,10 @@ void loop_difficulty_select() {
     SDL_RenderCopy(renderer, diffTexture, NULL, NULL);
     SDL_RenderPresent(renderer);
     if (gameState->currentState == STATE_GAMEPLAY) {
-        int difficultyBonus = 0;
-        if (gameState->currentDifficulty == gameState->diffNormal) { difficultyBonus = 600; gameState->scoreMultiplier = 2; }
-        else if (gameState->currentDifficulty == gameState->diffEasy) { difficultyBonus = 1200; }
-        else if (gameState->currentDifficulty == gameState->diffHard) { gameState->scoreMultiplier = 3; }
-        gameState->POOP_LIFETIME = POOP_BASE_LIFETIME + (gameState->animalCount * POOP_TIME_PER_ANIMAL) + difficultyBonus;
+        if (gameState->currentDifficulty == gameState->diffNormal) { gameState->scoreMultiplier = 3; }
+        else if (gameState->currentDifficulty == gameState->diffEasy) { gameState->scoreMultiplier = 1; }
+        else if (gameState->currentDifficulty == gameState->diffHard) { gameState->scoreMultiplier = 6; }
+        gameState->POOP_LIFETIME = 600 + (gameState->animalCount * 60); // 10s base + 1s per animal
         gameState->lastAnimTime = SDL_GetTicks();
     }
 }
@@ -623,11 +622,30 @@ void loop_gameplay() {
                             if (gameState->level >= gameState->MAX_LEVEL) { gameState->gameWon = true; gameState->currentState = STATE_GAME_OVER; }
                             else {
                                 gameState->level++; gameState->poopsToNextLevel = 5 + (gameState->level * 2);
-                                gameState->levelUpTimer = 90; if (gameState->lives < 3) gameState->lives++;
-                                gameState->coins += 50 * gameState->scoreMultiplier;
+                                gameState->levelUpTimer = 90;
+
+                                int levelBonus = 0;
+                                if (gameState->currentDifficulty == gameState->diffEasy) {
+                                    gameState->lives = 3;
+                                    levelBonus = 50;
+                                } else if (gameState->currentDifficulty == gameState->diffNormal) {
+                                    if (gameState->lives < 3) gameState->lives++;
+                                    levelBonus = 100;
+                                } else if (gameState->currentDifficulty == gameState->diffHard) {
+                                    levelBonus = 250;
+                                }
+                                gameState->coins += levelBonus;
+
+                                for (int i = 0; i < MAX_POOPS; i++) {
+                                    gameState->poops[i].active = false;
+                                    gameState->poops[i].lifeTimer = 0;
+                                    gameState->poops[i].hasFlies = false;
+                                    gameState->poops[i].penaltyApplied = false;
+                                }
+
                                 if (levelUpSound) Mix_PlayChannel(-1, levelUpSound, 0);
                                 if (gameState->animalCount < MAXANIMALS) gameState->animalCount++;
-                                gameState->POOP_LIFETIME = POOP_BASE_LIFETIME + (gameState->animalCount * POOP_TIME_PER_ANIMAL);
+                                gameState->POOP_LIFETIME = 600 + (gameState->animalCount * 60); // 10s base + 1s per animal
                             }
                         }
                     }
@@ -782,7 +800,10 @@ void loop_gameplay() {
         if (gameState->poops[i].active) {
             bool shouldDraw = true; int directionToDraw = 0;
             if (gameState->poops[i].hasFlies) { if ((SDL_GetTicks() / 100) % 2 == 0) directionToDraw = 1; }
-            else { if (gameState->poops[i].lifeTimer > gameState->POOP_LIFETIME * 0.75) { if ((SDL_GetTicks() / 200) % 2 == 0) shouldDraw = false; } }
+            else { 
+                if (gameState->poops[i].lifeTimer > gameState->POOP_LIFETIME * 0.75) { if ((SDL_GetTicks() / 200) % 2 == 0) shouldDraw = false; }
+                else if (gameState->poops[i].lifeTimer > gameState->POOP_LIFETIME * 0.50) { if ((SDL_GetTicks() / 400) % 2 == 0) shouldDraw = false; }
+            }
             if (shouldDraw) drawCreature(objectPoop, 0, directionToDraw, gameState->poops[i].x, gameState->poops[i].y);
         }
     }
